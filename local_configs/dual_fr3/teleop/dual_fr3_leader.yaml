@@ -1,0 +1,14 @@
+leader:
+  robot_type: franka
+  publish_frequency: 50.0
+
+leader_gripper:
+  from_yaml: grippers/franka_hand_fr3.yaml
+
+gravity_compensation_controller: control/gravity_compensation.yaml
+
+leader_namespace: leader
+leader_gripper_namespace: leader
+
+use_gripper: true
+disable_gripper_torque: false

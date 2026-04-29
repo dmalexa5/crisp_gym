@@ -1,0 +1,19 @@
+control_frequency: 30.0
+gripper_mode: absolute_continuous
+use_relative_actions: true
+
+cartesian_control_param_config: null
+joint_control_param_config: null
+
+robot_config:
+  robot_type: franka
+  publish_frequency: 50.0
+
+gripper_config:
+  from_yaml: grippers/franka_hand_fr3.yaml
+
+camera_configs:
+  - from_yaml: cameras/base_camera.yaml
+  - from_yaml: cameras/wrist_camera.yaml
+
+sensor_configs: []

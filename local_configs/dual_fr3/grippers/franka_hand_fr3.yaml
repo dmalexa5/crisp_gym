@@ -1,0 +1,9 @@
+min_value: 0.0
+max_value: 0.04
+joint_state_topic: fr3_gripper/joint_states
+command_topic: fr3_gripper/gripper_action
+use_gripper_command_action: true
+max_effort: 10.0
+max_delta: 0.1
+reboot_service: null
+enable_torque_service: null
