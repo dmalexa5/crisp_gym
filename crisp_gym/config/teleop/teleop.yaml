@@ -4,12 +4,12 @@ leader:
 leader_gripper:
   min_value: 0.0
   max_value: 1.0
-  joint_state_topic: /left/trigger/trigger_state_broadcaster/joint_states
+  joint_state_topic: /franka_gripper/joint_states
 
 gravity_compensation_controller: control/gravity_compensation.yaml
 
-leader_namespace: left
-leader_gripper_namespace: left/trigger
+leader_namespace: leader
+leader_gripper_namespace: leader/trigger
 
 use_gripper: true
 disable_gripper_torque: true

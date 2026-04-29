@@ -76,6 +76,23 @@ class TeleopRobotConfig(ABC):
 
         return cls(**data)
 
+@dataclass
+class LeaderFrankaTeleopConfig(TeleopRobotConfig):
+    """Configuration for the leader franka arm."""
+
+    leader: RobotConfig = field(default_factory=lambda: FrankaConfig())
+    leader_gripper: GripperConfig | None = field(
+        default_factory=lambda: GripperConfig.from_yaml(
+            path=(find_config("gripper_franka.yaml")).resolve()
+        )
+    )
+
+    gravity_compensation_controller: Path = field(
+        default_factory=lambda: find_config("control/gravity_compensation.yaml")
+    )
+
+    leader_namespace: str = "leader"
+    leader_gripper_namespace: str = "leader"
 
 @dataclass
 class LeftAlohaFrankaTeleopRobotConfig(TeleopRobotConfig):
@@ -186,6 +203,7 @@ def list_leader_configs() -> list[str]:
 
 
 STRING_TO_CONFIG = {
+    "leader_franka": LeaderFrankaTeleopConfig,
     "left_aloha_franka": LeftAlohaFrankaTeleopRobotConfig,
     "right_aloha_franka": RightAlohaFrankaTeleopRobotConfig,
     "no_gripper": NoGripperTeleopRobotConfig,
