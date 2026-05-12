@@ -246,8 +246,8 @@ def main():
                     "cartesian_impedance_controller"
                 )
 
-                if leader.gripper is not None:
-                    leader.gripper.disable_torque()
+                # if leader.gripper is not None:
+                #     leader.gripper.disable_torque()
 
         def on_end():
             """Hook function to be called when stopping the recording."""
