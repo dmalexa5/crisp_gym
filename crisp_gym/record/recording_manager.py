@@ -2,6 +2,7 @@
 
 import logging
 import multiprocessing as mp
+import shutil
 import subprocess
 import threading
 import time
@@ -133,16 +134,18 @@ class RecordingManager(ABC):
         logger.debug("Creating dataset object.")
         if self.config.resume:
             logger.info(f"Resuming recording from existing dataset: {self.config.repo_id}")
-            dataset = LeRobotDataset(repo_id=self.config.repo_id)
-            if self.config.num_episodes <= dataset.num_episodes:
-                logger.error(
-                    f"The dataset already has {dataset.num_episodes} recorded. Please select a larger number."
-                )
+            dataset_path = self.dataset_directory
+            dataset = self._resume_or_create_local_dataset(dataset_path)
+            if self.config.num_episodes <= 0:
+                logger.error("Please select at least one episode to record.")
                 exit()
+            episodes_to_record = self.config.num_episodes
+            self.config.num_episodes = dataset.num_episodes + episodes_to_record
             logger.info(
-                f"Resuming from episode {dataset.num_episodes} with {self.config.num_episodes} episodes to record."
+                f"Resuming from episode {dataset.num_episodes}; recording "
+                f"{episodes_to_record} more episode(s)."
             )
-            self.episode_count_queue.put(dataset.num_episodes - 1)
+            self.episode_count_queue.put(dataset.num_episodes)
         else:
             logger.info(
                 f"[green]Creating new dataset: {self.config.repo_id}", extra={"markup": True}
@@ -155,15 +158,57 @@ class RecordingManager(ABC):
                 raise FileExistsError(
                     f"The repo_id already exists. If you intended to resume the collection of data, then execute this script with the --resume flag. Otherwise remove it:\n'rm -r {str(Path(HF_LEROBOT_HOME / self.config.repo_id))}'."
                 )
-            dataset = LeRobotDataset.create(
-                repo_id=self.config.repo_id,
-                fps=self.config.fps,
-                robot_type=self.config.robot_type,
-                features=self.config.features,
-                use_videos=True,
-            )
+            dataset = self._create_new_dataset()
             logger.debug(f"Dataset created with meta: {dataset.meta}")
         return dataset
+
+    def _resume_or_create_local_dataset(self, dataset_path: Path) -> LeRobotDataset:
+        """Resume a local dataset, or recreate an empty incomplete local cache."""
+        if not dataset_path.exists():
+            if self.config.push_to_hub:
+                return LeRobotDataset(repo_id=self.config.repo_id)
+            logger.info(
+                f"No local dataset found at {dataset_path}. Creating a new local dataset."
+            )
+            return self._create_new_dataset()
+
+        required_metadata = [
+            dataset_path / "meta" / "info.json",
+            dataset_path / "meta" / "tasks.jsonl",
+            dataset_path / "meta" / "episodes.jsonl",
+        ]
+        has_episode_data = any(dataset_path.glob("data/**/*.parquet")) or any(
+            dataset_path.glob("videos/**/*.mp4")
+        )
+        has_required_metadata = all(path.exists() for path in required_metadata)
+
+        if has_required_metadata:
+            return LeRobotDataset(repo_id=self.config.repo_id, root=dataset_path)
+
+        if has_episode_data:
+            missing = [str(path) for path in required_metadata if not path.exists()]
+            raise FileNotFoundError(
+                "Local dataset has episode data but is missing required metadata, so it cannot "
+                f"be resumed safely. Missing: {missing}"
+            )
+
+        logger.warning(
+            f"Local dataset at {dataset_path} is incomplete and has no saved episodes. "
+            "Recreating it locally."
+        )
+        shutil.rmtree(dataset_path)
+        return self._create_new_dataset()
+
+    def _create_new_dataset(self) -> LeRobotDataset:
+        """Create a new LeRobot dataset using the recording configuration."""
+        return LeRobotDataset.create(
+            repo_id=self.config.repo_id,
+            fps=self.config.fps,
+            robot_type=self.config.robot_type,
+            features=self.config.features,
+            root=self.dataset_directory,
+            use_videos=True,
+        )
 
     def _writer_proc(self):
         """Process to write data to the dataset."""
